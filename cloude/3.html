@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Montador de Projeto</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;display:flex;flex-direction:column;}
+
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:14px 24px;display:flex;align-items:center;gap:12px;}
+.header-icon{width:42px;height:42px;background:linear-gradient(135deg,#1f6feb,#a855f7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.header-title{font-size:17px;font-weight:700;}
+.header-sub{font-size:11px;color:#8b949e;margin-top:2px;}
+
+.main{display:flex;flex:1;height:calc(100vh - 67px);}
+
+/* ── LISTA ESQUERDA ── */
+.sidebar{width:280px;min-width:220px;background:#161b22;border-right:1px solid #30363d;display:flex;flex-direction:column;}
+.sidebar-title{padding:10px 14px;font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #30363d;display:flex;justify-content:space-between;align-items:center;}
+.file-list{flex:1;overflow-y:auto;padding:6px;}
+.file-list::-webkit-scrollbar{width:4px;}
+.file-list::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px;}
+
+.file-item{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:6px;cursor:pointer;border:1px solid transparent;margin-bottom:3px;transition:all 0.15s;}
+.file-item:hover{background:#21262d;}
+.file-item.active{background:#1c2128;border-color:#1f6feb;}
+.file-item-icon{font-size:14px;flex-shrink:0;}
+.file-item-info{flex:1;min-width:0;}
+.file-item-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-item-path{font-size:10px;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-item-del{opacity:0;padding:2px 5px;background:#2d0f0f;color:#f85149;border:none;border-radius:4px;cursor:pointer;font-size:11px;transition:opacity 0.15s;}
+.file-item:hover .file-item-del{opacity:1;}
+
+.sidebar-bottom{padding:10px;border-top:1px solid #30363d;display:flex;flex-direction:column;gap:6px;}
+
+/* ── EDITOR DIREITA ── */
+.editor-area{flex:1;display:flex;flex-direction:column;}
+.editor-toolbar{padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.editor-toolbar input{background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:6px 10px;border-radius:6px;font-size:12px;outline:none;transition:border 0.15s;}
+.editor-toolbar input:focus{border-color:#1f6feb;}
+.inp-nome{width:180px;}
+.inp-pasta{width:160px;}
+
+.editor-main{flex:1;display:flex;flex-direction:column;}
+textarea#editor{flex:1;background:#0d1117;border:none;outline:none;color:#e6edf3;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;padding:16px;resize:none;}
+textarea#editor::placeholder{color:#484f58;}
+
+.editor-bottom{padding:10px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.info-bar{flex:1;font-size:11px;color:#8b949e;}
+
+/* ── BOTÕES ── */
+.btn{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;}
+.btn-blue{background:#1f6feb;color:#fff;}
+.btn-blue:hover{background:#388bfd;}
+.btn-green{background:#196c2e;color:#3fb950;border:1px solid #3fb950;}
+.btn-green:hover{background:#238636;color:#fff;}
+.btn-purple{background:#2d1f4e;color:#bc8cff;border:1px solid #a855f7;}
+.btn-purple:hover{background:#3d2a6e;color:#fff;}
+.btn-gray{background:#21262d;color:#e6edf3;border:1px solid #30363d;}
+.btn-gray:hover{background:#30363d;}
+.btn-red{background:#2d0f0f;color:#f85149;border:1px solid #f85149;}
+.btn-red:hover{background:#f85149;color:#fff;}
+.btn-orange{background:#3d1f00;color:#f0883e;border:1px solid #f0883e;}
+.btn-orange:hover{background:#5a3000;color:#fff;}
+
+/* ── EMPTY ── */
+.empty-editor{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#484f58;text-align:center;padding:40px;}
+.empty-editor-icon{font-size:56px;margin-bottom:16px;}
+.empty-editor-title{font-size:16px;color:#8b949e;margin-bottom:8px;}
+.empty-editor-desc{font-size:12px;line-height:1.8;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:400px;max-width:90vw;}
+.modal h3{font-size:15px;margin-bottom:16px;}
+.modal input,.modal select{width:100%;background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:8px 12px;border-radius:6px;font-size:13px;outline:none;margin-bottom:12px;}
+.modal input:focus,.modal select:focus{border-color:#1f6feb;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;}
+
+/* ── PREVIEW ESTRUTURA ── */
+.estrutura-modal{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:500px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;}
+.estrutura-modal h3{font-size:15px;margin-bottom:12px;}
+.estrutura-body{flex:1;overflow-y:auto;background:#0d1117;border-radius:8px;padding:14px;font-family:'Courier New',monospace;font-size:12px;line-height:1.8;color:#8b949e;margin-bottom:14px;}
+.estrutura-body .pasta{color:#d29922;}
+.estrutura-body .arq{color:#79c0ff;}
+.estrutura-btns{display:flex;gap:8px;justify-content:flex-end;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-icon">🗂️</div>
+  <div>
+    <div class="header-title">Montador de Projeto</div>
+    <div class="header-sub">Cole cada arquivo, nomeie, organize em pastas → baixa ZIP + script .bat que monta tudo</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR: lista de arquivos -->
+  <div class="sidebar">
+    <div class="sidebar-title">
+      <span>📁 Arquivos (<span id="qtd">0</span>)</span>
+    </div>
+    <div class="file-list" id="file-list">
+      <div style="text-align:center;padding:30px 10px;color:#484f58;font-size:12px;">
+        Nenhum arquivo ainda.<br>Clique em <strong>+ Novo</strong>
+      </div>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn btn-blue" onclick="novoArquivo()">➕ Novo Arquivo</button>
+      <button class="btn btn-gray" onclick="verEstrutura()">🌳 Ver Estrutura</button>
+      <button class="btn btn-green" onclick="baixarZip()">📦 Baixar ZIP + .bat</button>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div class="editor-area" id="editor-area">
+    <div class="empty-editor" id="empty-editor">
+      <div class="empty-editor-icon">🗂️</div>
+      <div class="empty-editor-title">Nenhum arquivo selecionado</div>
+      <div class="empty-editor-desc">
+        Clique em <strong>+ Novo Arquivo</strong> para começar<br>
+        Cole o código, dê um nome e uma pasta<br><br>
+        No final clique em <strong>📦 Baixar ZIP + .bat</strong><br>
+        O .bat cria todas as pastas e coloca cada arquivo no lugar certo
+      </div>
+    </div>
+
+    <div id="editor-real" style="display:none;flex:1;flex-direction:column;display:none;">
+      <div class="editor-toolbar">
+        <span style="font-size:11px;color:#8b949e;">Nome:</span>
+        <input class="inp-nome" id="inp-nome" type="text" placeholder="index.html"
+               oninput="salvarCampos()">
+        <span style="font-size:11px;color:#8b949e;">Pasta:</span>
+        <input class="inp-pasta" id="inp-pasta" type="text" placeholder="src/components"
+               oninput="salvarCampos()"
+               title="Deixe vazio para raiz. Ex: src, src/components, .github/workflows">
+        <button class="btn btn-gray" onclick="novoArquivo()">➕ Novo</button>
+        <button class="btn btn-orange" onclick="duplicarAtual()">📋 Duplicar</button>
+      </div>
+      <div class="editor-main">
+        <textarea id="editor"
+          placeholder="Cole o conteúdo do arquivo aqui..."
+          oninput="salvarConteudo()"></textarea>
+      </div>
+      <div class="editor-bottom">
+        <div class="info-bar" id="info-bar">0 chars</div>
+        <button class="btn btn-gray" onclick="baixarEsteArquivo()">⬇️ Baixar este</button>
+        <button class="btn btn-red" onclick="deletarAtual()">🗑️ Deletar</button>
+        <button class="btn btn-green" onclick="baixarZip()">📦 ZIP + .bat</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: novo arquivo -->
+<div class="modal-overlay" id="modal-novo">
+  <div class="modal">
+    <h3>➕ Novo Arquivo</h3>
+    <label style="font-size:11px;color:#8b949e;display:block;margin-bottom:4px;">Nome do arquivo</label>
+    <input id="m-nome" type="text" placeholder="index.html, package.json, App.tsx...">
+    <label style="font-size:11px;color:#8b949e;display:block;margin-bottom:4px;">Pasta (deixe vazio para raiz)</label>
+    <input id="m-pasta" type="text" placeholder="src, src/components, .github/workflows">
+    <label style="font-size:11px;color:#8b949e;display:block;margin-bottom:4px;">Tipo</label>
+    <select id="m-tipo">
+      <option value="html">HTML</option>
+      <option value="js">JavaScript</option>
+      <option value="ts">TypeScript</option>
+      <option value="jsx">JSX</option>
+      <option value="tsx">TSX</option>
+      <option value="css">CSS</option>
+      <option value="json">JSON</option>
+      <option value="yaml">YAML / Workflow</option>
+      <option value="txt">Texto</option>
+      <option value="md">Markdown</option>
+      <option value="sh">Shell / Bash</option>
+      <option value="outro">Outro</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="fecharModal('modal-novo')">Cancelar</button>
+      <button class="btn btn-blue" onclick="confirmarNovo()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: estrutura -->
+<div class="modal-overlay" id="modal-estrutura">
+  <div class="estrutura-modal">
+    <h3>🌳 Estrutura do Projeto</h3>
+    <div class="estrutura-body" id="estrutura-body"></div>
+    <div class="estrutura-btns">
+      <button class="btn btn-gray" onclick="fecharModal('modal-estrutura')">Fechar</button>
+      <button class="btn btn-green" onclick="baixarZip()">📦 Baixar ZIP + .bat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════════
+let arquivos = [];   // [{id, nome, pasta, tipo, conteudo}]
+let ativoId  = null;
+let contador = 0;
+
+// ══════════════════════════════════════════════
+//  NOVO ARQUIVO
+// ══════════════════════════════════════════════
+function novoArquivo() {
+  document.getElementById('m-nome').value  = '';
+  document.getElementById('m-pasta').value = '';
+  document.getElementById('m-tipo').value  = 'html';
+  abrirModal('modal-novo');
+  setTimeout(() => document.getElementById('m-nome').focus(), 100);
+}
+
+function confirmarNovo() {
+  const nome  = document.getElementById('m-nome').value.trim();
+  const pasta = document.getElementById('m-pasta').value.trim();
+  const tipo  = document.getElementById('m-tipo').value;
+  if (!nome) { alert('Digite o nome do arquivo!'); return; }
+
+  const id = 'arq-' + (++contador);
+  arquivos.push({ id, nome, pasta, tipo, conteudo: '' });
+  fecharModal('modal-novo');
+  renderLista();
+  selecionarArquivo(id);
+  setTimeout(() => document.getElementById('editor').focus(), 100);
+}
+
+// ══════════════════════════════════════════════
+//  SELECIONAR / SALVAR
+// ══════════════════════════════════════════════
+function selecionarArquivo(id) {
+  ativoId = id;
+  const arq = getArq(id);
+  if (!arq) return;
+
+  document.getElementById('empty-editor').style.display = 'none';
+  const er = document.getElementById('editor-real');
+  er.style.display = 'flex';
+  er.style.flexDirection = 'column';
+  er.style.flex = '1';
+
+  document.getElementById('inp-nome').value  = arq.nome;
+  document.getElementById('inp-pasta').value = arq.pasta;
+  document.getElementById('editor').value    = arq.conteudo;
+  atualizarInfoBar();
+  renderLista();
+}
+
+function salvarCampos() {
+  const arq = getArq(ativoId);
+  if (!arq) return;
+  arq.nome  = document.getElementById('inp-nome').value.trim() || arq.nome;
+  arq.pasta = document.getElementById('inp-pasta').value.trim();
+  renderLista();
+}
+
+function salvarConteudo() {
+  const arq = getArq(ativoId);
+  if (!arq) return;
+  arq.conteudo = document.getElementById('editor').value;
+  atualizarInfoBar();
+}
+
+function atualizarInfoBar() {
+  const len = document.getElementById('editor').value.length;
+  const linhas = document.getElementById('editor').value.split('\n').length;
+  document.getElementById('info-bar').textContent =
+    `${linhas} linhas · ${len > 1024 ? (len/1024).toFixed(1)+'KB' : len+' chars'}`;
+}
+
+// ══════════════════════════════════════════════
+//  DELETAR / DUPLICAR
+// ══════════════════════════════════════════════
+function deletarAtual() {
+  if (!ativoId) return;
+  if (!confirm('Deletar este arquivo?')) return;
+  arquivos = arquivos.filter(a => a.id !== ativoId);
+  ativoId = null;
+  document.getElementById('editor-real').style.display = 'none';
+  document.getElementById('empty-editor').style.display = 'flex';
+  renderLista();
+}
+
+function deletarArquivo(id, e) {
+  e.stopPropagation();
+  arquivos = arquivos.filter(a => a.id !== id);
+  if (ativoId === id) {
+    ativoId = null;
+    document.getElementById('editor-real').style.display = 'none';
+    document.getElementById('empty-editor').style.display = 'flex';
+  }
+  renderLista();
+}
+
+function duplicarAtual() {
+  const arq = getArq(ativoId);
+  if (!arq) return;
+  const id = 'arq-' + (++contador);
+  arquivos.push({
+    id, nome: 'copia-'+arq.nome,
+    pasta: arq.pasta, tipo: arq.tipo,
+    conteudo: arq.conteudo
+  });
+  renderLista();
+  selecionarArquivo(id);
+}
+
+// ══════════════════════════════════════════════
+//  RENDER LISTA
+// ══════════════════════════════════════════════
+const icones = {
+  html:'🌐', js:'📜', ts:'📘', jsx:'⚛️', tsx:'⚛️',
+  css:'🎨', json:'⚙️', yaml:'⚙️', txt:'📝',
+  md:'📋', sh:'🖥️', outro:'📄'
+};
+
+function renderLista() {
+  const lista = document.getElementById('file-list');
+  document.getElementById('qtd').textContent = arquivos.length;
+
+  if (!arquivos.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:30px 10px;color:#484f58;font-size:12px;">
+      Nenhum arquivo ainda.<br>Clique em <strong>+ Novo</strong></div>`;
+    return;
+  }
+
+  lista.innerHTML = arquivos.map(arq => `
+    <div class="file-item ${arq.id === ativoId ? 'active' : ''}"
+         onclick="selecionarArquivo('${arq.id}')">
+      <span class="file-item-icon">${icones[arq.tipo]||'📄'}</span>
+      <div class="file-item-info">
+        <div class="file-item-name">${arq.nome}</div>
+        <div class="file-item-path">${arq.pasta ? '/'+arq.pasta+'/' : '/ (raiz)'}</div>
+      </div>
+      <button class="file-item-del"
+              onclick="deletarArquivo('${arq.id}', event)">✕</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  BAIXAR ESTE ARQUIVO
+// ══════════════════════════════════════════════
+function baixarEsteArquivo() {
+  const arq = getArq(ativoId);
+  if (!arq) return;
+  const blob = new Blob([arq.conteudo], {type:'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = arq.nome; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════
+//  VER ESTRUTURA
+// ══════════════════════════════════════════════
+function verEstrutura() {
+  if (!arquivos.length) { alert('Nenhum arquivo ainda!'); return; }
+
+  // Monta árvore
+  const pastas = {};
+  arquivos.forEach(arq => {
+    const pasta = arq.pasta || '';
+    if (!pastas[pasta]) pastas[pasta] = [];
+    pastas[pasta].push(arq);
+  });
+
+  let html = '<pre>';
+  const pastasOrdenadas = Object.keys(pastas).sort();
+
+  pastasOrdenadas.forEach(pasta => {
+    if (pasta) {
+      const partes = pasta.split('/');
+      partes.forEach((p, i) => {
+        html += `<span class="pasta">${'  '.repeat(i)}📁 ${p}/</span>\n`;
+      });
+      pastas[pasta].forEach(arq => {
+        html += `<span class="arq">${'  '.repeat(partes.length)}📄 ${arq.nome}</span>\n`;
+      });
+    } else {
+      pastas[pasta].forEach(arq => {
+        html += `<span class="arq">📄 ${arq.nome}</span>\n`;
+      });
+    }
+  });
+
+  html += '</pre>';
+  document.getElementById('estrutura-body').innerHTML = html;
+  abrirModal('modal-estrutura');
+}
+
+// ══════════════════════════════════════════════
+//  BAIXAR ZIP + .BAT
+// ══════════════════════════════════════════════
+async function baixarZip() {
+  if (!arquivos.length) { alert('Nenhum arquivo ainda!'); return; }
+
+  // Gera o .bat
+  let bat = `@echo off\n`;
+  bat += `echo Montando estrutura do projeto...\n\n`;
+
+  // Cria pastas
+  const pastas = [...new Set(arquivos.map(a => a.pasta).filter(Boolean))];
+  pastas.sort().forEach(pasta => {
+    bat += `if not exist "${pasta.replace(/\//g,'\\')}" mkdir "${pasta.replace(/\//g,'\\')}" \n`;
+  });
+
+  bat += `\necho Pastas criadas com sucesso!\n`;
+  bat += `echo.\n`;
+  bat += `echo Arquivos incluidos:\n`;
+  arquivos.forEach(arq => {
+    const caminho = arq.pasta ? arq.pasta+'/'+arq.nome : arq.nome;
+    bat += `echo   ${caminho}\n`;
+  });
+  bat += `\necho.\n`;
+  bat += `echo Projeto montado! Abra o index.html no navegador.\n`;
+  bat += `pause\n`;
+
+  // Gera arquivo de manifesto (lista todos os arquivos e caminhos)
+  let manifest = `# MANIFESTO DO PROJETO\n`;
+  manifest += `# Gerado em: ${new Date().toLocaleString('pt-BR')}\n`;
+  manifest += `# Total de arquivos: ${arquivos.length}\n\n`;
+  arquivos.forEach(arq => {
+    const caminho = arq.pasta ? arq.pasta+'/'+arq.nome : arq.nome;
+    manifest += `## ${caminho}\n`;
+    manifest += `\`\`\`${arq.tipo}\n${arq.conteudo}\n\`\`\`\n\n`;
+  });
+
+  // Usa JSZip se disponível, senão baixa tudo separado
+  if (typeof JSZip !== 'undefined') {
+    await gerarZipReal(bat, manifest);
+  } else {
+    await baixarTudoSeparado(bat, manifest);
+  }
+}
+
+async function baixarTudoSeparado(bat, manifest) {
+  // Baixa cada arquivo
+  for (let i = 0; i < arquivos.length; i++) {
+    const arq = arquivos[i];
+    await delay(i * 150);
+    const blob = new Blob([arq.conteudo], {type:'text/plain'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = arq.nome;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Baixa o .bat
+  await delay(arquivos.length * 150 + 200);
+  baixarBlob(bat, 'montar-projeto.bat', 'text/plain');
+
+  // Baixa o manifesto
+  await delay(200);
+  baixarBlob(manifest, 'manifesto-projeto.md', 'text/plain');
+
+  alert(`✅ ${arquivos.length} arquivos baixados!\n\n📌 Instruções:\n1. Crie uma pasta para o projeto\n2. Coloque cada arquivo na pasta correta (veja o manifesto)\n3. Execute o montar-projeto.bat para criar as subpastas`);
+}
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function getArq(id) { return arquivos.find(a => a.id === id); }
+
+function baixarBlob(conteudo, nome, tipo) {
+  const blob = new Blob([conteudo], {type: tipo || 'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = nome; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function abrirModal(id)  { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Fechar modal clicando fora
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) el.classList.remove('open');
+  });
+});
+
+// Enter no modal
+document.getElementById('m-pasta').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmarNovo();
+});
+document.getElementById('m-nome').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('m-pasta').focus();
+});
+</script>
+</body>
+</html>
