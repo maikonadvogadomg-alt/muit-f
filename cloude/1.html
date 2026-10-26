@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juntador de Projetos</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 {
+      color: #4a90d9;
+      font-size: 1.4rem;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .zona-drop {
+      border: 2px dashed #2a2a4e;
+      border-radius: 12px;
+      padding: 48px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 20px;
+      background: #1a1a2e;
+    }
+
+    .zona-drop:hover, .zona-drop.ativo {
+      border-color: #4a90d9;
+      background: #1e2a3e;
+    }
+
+    .zona-drop span { font-size: 3rem; display: block; margin-bottom: 12px; }
+    .zona-drop p { color: #888; margin-top: 8px; font-size: 0.9rem; }
+
+    .opcoes {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4e;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .opcoes label { color: #aaa; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .opcoes input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+    .ignorar-input {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4e;
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: #e0e0e0;
+      font-size: 0.85rem;
+      width: 300px;
+    }
+
+    .botoes {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primario { background: #4a90d9; color: white; }
+    .btn-primario:hover:not(:disabled) { background: #357abd; }
+    .btn-sucesso { background: #27ae60; color: white; }
+    .btn-sucesso:hover:not(:disabled) { background: #219a52; }
+    .btn-secundario { background: #2a2a4e; color: #aaa; }
+    .btn-secundario:hover:not(:disabled) { background: #3a3a6e; color: white; }
+    .btn-perigo { background: #c0392b; color: white; }
+    .btn-perigo:hover:not(:disabled) { background: #a93226; }
+
+    .info-bar {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4e;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: none;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .info-bar.visivel { display: flex; }
+
+    .info-item { font-size: 0.85rem; color: #aaa; }
+    .info-item strong { color: #4a90d9; }
+
+    .lista-arquivos {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4e;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .lista-arquivos.visivel { display: block; }
+
+    .arquivo-linha {
+      padding: 4px 8px;
+      font-size: 0.82rem;
+      color: #aaa;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .arquivo-linha:hover { background: #2a2a4e; }
+    .arquivo-linha .tamanho { color: #555; font-size: 0.78rem; }
+
+    .resultado {
+      background: #111122;
+      border: 1px solid #2a2a4e;
+      border-radius: 8px;
+      padding: 20px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 500px;
+      overflow-y: auto;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .resultado.visivel { display: block; }
+
+    .progresso {
+      background: #1a1a2e;
+      border-radius: 8px;
+      height: 6px;
+      margin-bottom: 16px;
+      display: none;
+      overflow: hidden;
+    }
+
+    .progresso.visivel { display: block; }
+
+    .progresso-barra {
+      height: 100%;
+      background: #4a90d9;
+      border-radius: 8px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    .status {
+      color: #4a90d9;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      min-height: 20px;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #2a2a4e; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4a90d9; }
+  </style>
+</head>
+<body>
+
+  <h1>📦 Juntador de Projetos</h1>
+
+  <!-- ZONA DE DROP -->
+  <div class="zona-drop" id="zona-drop">
+    <span>📦</span>
+    <strong>Arraste o ZIP aqui</strong>
+    <p>ou clique para selecionar o arquivo</p>
+    <input type="file" id="input-zip" accept=".zip" style="display:none">
+  </div>
+
+  <!-- OPÇÕES -->
+  <div class="opcoes">
+    <label>
+      <input type="checkbox" id="opt-ignorar-node" checked>
+      Ignorar node_modules
+    </label>
+    <label>
+      <input type="checkbox" id="opt-ignorar-git" checked>
+      Ignorar .git
+    </label>
+    <label>
+      <input type="checkbox" id="opt-ignorar-lock" checked>
+      Ignorar package-lock / yarn.lock
+    </label>
+    <label>
+      <input type="checkbox" id="opt-ignorar-binarios" checked>
+      Ignorar binários (imagens, fontes)
+    </label>
+    <div style="width:100%; display:flex; align-items:center; gap:10px;">
+      <span style="color:#aaa; font-size:0.85rem;">Ignorar também:</span>
+      <input type="text" class="ignorar-input" id="ignorar-extra"
+        placeholder="ex: dist, build, .env (separado por vírgula)">
+    </div>
+  </div>
+
+  <!-- BOTÕES -->
+  <div class="botoes">
+    <button class="btn btn-primario" id="btn-juntar" disabled>🔗 Juntar Tudo</button>
+    <button class="btn btn-sucesso" id="btn-baixar" disabled>💾 Baixar TXT</button>
+    <button class="btn btn-secundario" id="btn-copiar" disabled>📋 Copiar Tudo</button>
+    <button class="btn btn-perigo" id="btn-limpar" disabled>🗑️ Limpar</button>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status" id="status"></div>
+
+  <!-- PROGRESSO -->
+  <div class="progresso" id="progresso">
+    <div class="progresso-barra" id="progresso-barra"></div>
+  </div>
+
+  <!-- INFO -->
+  <div class="info-bar" id="info-bar">
+    <div class="info-item">📁 Projeto: <strong id="info-nome">—</strong></div>
+    <div class="info-item">📄 Arquivos: <strong id="info-total">0</strong></div>
+    <div class="info-item">📝 Linhas: <strong id="info-linhas">0</strong></div>
+    <div class="info-item">💾 Tamanho: <strong id="info-tamanho">0 KB</strong></div>
+  </div>
+
+  <!-- LISTA DE ARQUIVOS -->
+  <div class="lista-arquivos" id="lista-arquivos"></div>
+
+  <!-- RESULTADO -->
+  <div class="resultado" id="resultado"></div>
+
+  <script>
+    // ============================================
+    // ESTADO
+    // ============================================
+    var estado = {
+      zipCarregado: null,
+      nomeZip: '',
+      arquivosLidos: {},
+      textoFinal: '',
+      pronto: false
+    };
+
+    // ============================================
+    // ELEMENTOS
+    // ============================================
+    var zonaEl      = document.getElementById('zona-drop');
+    var inputEl     = document.getElementById('input-zip');
+    var btnJuntar   = document.getElementById('btn-juntar');
+    var btnBaixar   = document.getElementById('btn-baixar');
+    var btnCopiar   = document.getElementById('btn-copiar');
+    var btnLimpar   = document.getElementById('btn-limpar');
+    var statusEl    = document.getElementById('status');
+    var progressoEl = document.getElementById('progresso');
+    var barraEl     = document.getElementById('progresso-barra');
+    var infoEl      = document.getElementById('info-bar');
+    var listaEl     = document.getElementById('lista-arquivos');
+    var resultadoEl = document.getElementById('resultado');
+
+    // ============================================
+    // DRAG AND DROP
+    // ============================================
+    zonaEl.addEventListener('click', function() { inputEl.click(); });
+
+    zonaEl.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      zonaEl.classList.add('ativo');
+    });
+
+    zonaEl.addEventListener('dragleave', function() {
+      zonaEl.classList.remove('ativo');
+    });
+
+    zonaEl.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zonaEl.classList.remove('ativo');
+      var arquivo = e.dataTransfer.files[0];
+      if (arquivo && arquivo.name.endsWith('.zip')) {
+        carregarZip(arquivo);
+      } else {
+        setStatus('❌ Apenas arquivos ZIP são aceitos.');
+      }
+    });
+
+    inputEl.addEventListener('change', function(e) {
+      if (e.target.files[0]) carregarZip(e.target.files[0]);
+    });
+
+    // ============================================
+    // CARREGAR ZIP
+    // ============================================
+    async function carregarZip(arquivo) {
+      setStatus('📦 Lendo ZIP...');
+      mostrarProgresso(10);
+
+      try {
+        estado.nomeZip = arquivo.name.replace('.zip', '');
+        estado.zipCarregado = await JSZip.loadAsync(arquivo);
+        estado.arquivosLidos = {};
+        estado.pronto = false;
+
+        setStatus('✅ ZIP carregado: ' + arquivo.name + ' — clique em Juntar Tudo');
+        mostrarProgresso(100);
+
+        btnJuntar.disabled = false;
+        btnLimpar.disabled = false;
+
+        // Lista os arquivos
+        var lista = [];
+        estado.zipCarregado.forEach(function(caminho, entry) {
+          if (!entry.dir) lista.push(caminho);
+        });
+
+        mostrarLista(lista);
+
+      } catch(e) {
+        setStatus('❌ Erro ao ler ZIP: ' + e.message);
+        console.error(e);
+      }
+    }
+
+    // ============================================
+    // JUNTAR TUDO
+    // ============================================
+    btnJuntar.addEventListener('click', async function() {
+      if (!estado.zipCarregado) return;
+
+      setStatus('🔗 Juntando arquivos...');
+      btnJuntar.disabled = true;
+      mostrarProgresso(0);
+
+      var ignorarLista = montarListaIgnorar();
+      var arquivos = {};
+      var promessas = [];
+      var total = 0;
+      var processados = 0;
+
+      // Conta total
+      estado.zipCarregado.forEach(function(caminho, entry) {
+        if (!entry.dir && !deveIgnorar(caminho, ignorarLista)) total++;
+      });
+
+      // Lê cada arquivo
+      estado.zipCarregado.forEach(function(caminho, entry) {
+        if (entry.dir) return;
+        if (deveIgnorar(caminho, ignorarLista)) return;
+
+        var p = entry.async('string').then(function(conteudo) {
+          arquivos[caminho] = conteudo;
+          processados++;
+          var pct = Math.round((processados / total) * 90);
+          mostrarProgresso(pct);
+          setStatus('🔗 Lendo ' + processados + ' de ' + total + ' arquivos...');
+        }).catch(function() {
+          arquivos[caminho] = '[arquivo binário — ignorado]';
+          processados++;
+        });
+
+        promessas.push(p);
+      });
+
+      await Promise.all(promessas);
+
+      // Monta o texto final
+      var texto = montarTexto(arquivos);
+      estado.textoFinal = texto;
+      estado.arquivosLidos = arquivos;
+      estado.pronto = true;
+
+      // Estatísticas
+      var totalArquivos = Object.keys(arquivos).length;
+      var totalLinhas = texto.split('\n').length;
+      var tamanhoKB = Math.round(texto.length / 1024);
+
+      document.getElementById('info-nome').textContent = estado.nomeZip;
+      document.getElementById('info-total').textContent = totalArquivos;
+      document.getElementById('info-linhas').textContent = totalLinhas.toLocaleString('pt-BR');
+      document.getElementById('info-tamanho').textContent = tamanhoKB + ' KB';
+      infoEl.classList.add('visivel');
+
+      // Mostra prévia
+      var previa = texto.substring(0, 3000) + (texto.length > 3000 ? '\n\n... [prévia — baixe o TXT para ver tudo] ...' : '');
+      resultadoEl.textContent = previa;
+      resultadoEl.classList.add('visivel');
+
+      mostrarProgresso(100);
+      setStatus('✅ Pronto! ' + totalArquivos + ' arquivos juntados em ' + tamanhoKB + ' KB');
+
+      btnBaixar.disabled = false;
+      btnCopiar.disabled = false;
+      btnJuntar.disabled = false;
+    });
+
+    // ============================================
+    // MONTAR TEXTO FINAL
+    // ============================================
+    function montarTexto(arquivos) {
+      var linhas = [];
+      var separador = '='.repeat(60);
+
+      linhas.push(separador);
+      linhas.push('PROJETO: ' + estado.nomeZip);
+      linhas.push('GERADO EM: ' + new Date().toLocaleString('pt-BR'));
+      linhas.push('TOTAL DE ARQUIVOS: ' + Object.keys(arquivos).length);
+      linhas.push(separador);
+      linhas.push('');
+
+      Object.keys(arquivos).sort().forEach(function(caminho) {
+        linhas.push('');
+        linhas.push(separador);
+        linhas.push('ARQUIVO: ' + caminho);
+        linhas.push(separador);
+        linhas.push('');
+        linhas.push(arquivos[caminho]);
+        linhas.push('');
+      });
+
+      linhas.push('');
+      linhas.push(separador);
+      linhas.push('FIM DO PROJETO: ' + estado.nomeZip);
+      linhas.push(separador);
+
+      return linhas.join('\n');
+    }
+
+    // ============================================
+    // VERIFICAR SE DEVE IGNORAR
+    // ============================================
+    function deveIgnorar(caminho, lista) {
+      return lista.some(function(ig) {
+        return caminho.toLowerCase().includes(ig.toLowerCase());
+      });
+    }
+
+    function montarListaIgnorar() {
+      var lista = [];
+
+      if (document.getElementById('opt-ignorar-node').checked) lista.push('node_modules');
+      if (document.getElementById('opt-ignorar-git').checked) lista.push('.git');
+      if (document.getElementById('opt-ignorar-lock').checked) {
+        lista.push('package-lock.json');
+        lista.push('yarn.lock');
+      }
+      if (document.getElementById('opt-ignorar-binarios').checked) {
+        ['.png','.jpg','.jpeg','.gif','.svg','.ico','.webp',
+         '.woff','.woff2','.ttf','.eot','.otf',
+         '.mp4','.mp3','.wav','.pdf'].forEach(function(ext) {
+          lista.push(ext);
+        });
+      }
+
+      var extra = document.getElementById('ignorar-extra').value;
+      if (extra.trim()) {
+        extra.split(',').forEach(function(item) {
+          var t = item.trim();
+          if (t) lista.push(t);
+        });
+      }
+
+      return lista;
+    }
+
+    // ============================================
+    // BAIXAR TXT
+    // ============================================
+    btnBaixar.addEventListener('click', function() {
+      if (!estado.pronto) return;
+      var blob = new Blob([estado.textoFinal], { type: 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = estado.nomeZip + '-completo.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus('💾 Arquivo baixado: ' + estado.nomeZip + '-completo.txt');
+    });
+
+    // ============================================
+    // COPIAR
+    // ============================================
+    btnCopiar.addEventListener('click', function() {
+      if (!estado.pronto) return;
+      navigator.clipboard.writeText(estado.textoFinal).then(function() {
+        setStatus('📋 Copiado! ' + Math.round(estado.textoFinal.length / 1024) + ' KB na área de transferência.');
+      }).catch(function() {
+        setStatus('❌ Não foi possível copiar. Use o botão Baixar TXT.');
+      });
+    });
+
+    // ============================================
+    // LIMPAR
+    // ============================================
+    btnLimpar.addEventListener('click', function() {
+      estado = { zipCarregado: null, nomeZip: '', arquivosLidos: {}, textoFinal: '', pronto: false };
+      btnJuntar.disabled = true;
+      btnBaixar.disabled = true;
+      btnCopiar.disabled = true;
+      btnLimpar.disabled = true;
+      resultadoEl.classList.remove('visivel');
+      listaEl.classList.remove('visivel');
+      infoEl.classList.remove('visivel');
+      progressoEl.classList.remove('visivel');
+      setStatus('');
+      inputEl.value = '';
+    });
+
+    // ============================================
+    // HELPERS
+    // ============================================
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+    }
+
+    function mostrarProgresso(pct) {
+      progressoEl.classList.add('visivel');
+      barraEl.style.width = pct + '%';
+    }
+
+    function mostrarLista(arquivos) {
+      var html = '<div style="color:#aaa; font-size:0.8rem; margin-bottom:8px;">📄 ' + arquivos.length + ' arquivos encontrados:</div>';
+      arquivos.sort().forEach(function(caminho) {
+        html += '<div class="arquivo-linha"><span>' + caminho + '</span></div>';
+      });
+      listaEl.innerHTML = html;
+      listaEl.classList.add('visivel');
+    }
+  </script>
+
+</body>
+</html>
